@@ -2,6 +2,8 @@
 logs
 *.log
 npm-debug.log*
+dist
+.gulp-cache
 
 # Runtime data
 pids
