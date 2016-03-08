@@ -1,4 +1,5 @@
 const Registry = require('winreg');
+const lodash = require('lodash');
 const async = require('async');
 const glob = require('glob');
 const path = require('path');
@@ -10,8 +11,14 @@ module.exports = class PathHelper {
         "\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App 225540": "InstallLocation"
     };
 
-    static glob(cwd, pattern, fn){
-        return glob(path.join(cwd, pattern), fn);
+    static glob(cwd, patterns, fn){
+        if(!Array.isArray(patterns))
+            patterns = [patterns];
+        async.map(patterns, (pattern, cb) => glob(path.join(cwd, pattern), cb), (err, results) =>{
+            if(err)
+                return fn(err);
+            return fn(null, lodash.flatten(results));
+        });
     }
 
     static tryGetInstallPath(fn){

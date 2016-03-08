@@ -11,9 +11,12 @@
   "dependencies": {
     "async": "^1.5.2",
     "binary": "^0.3.0",
+    "concentrate": "^0.2.3",
     "dissolve": "^0.3.3",
+    "expect.js": "^0.3.1",
     "glob": "^7.0.3",
     "lazy.js": "^0.4.2",
+    "lodash": "^4.6.1",
     "winreg": "^1.0.1"
   },
   "devDependencies": {
