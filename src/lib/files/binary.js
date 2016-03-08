@@ -6,7 +6,7 @@ module.exports = class BinaryFile {
     }
 
     static deserialize(buffer){
-        var parser = this.getParser();
+        let parser = this.getParser();
         parser.write(buffer);
         return parser.vars_list.length > 0 ? parser.vars_list[0] : parser.vars;
     }
