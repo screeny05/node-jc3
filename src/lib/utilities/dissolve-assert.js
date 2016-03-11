@@ -42,5 +42,26 @@ module.exports = {
             if(!lodash.isEqual(binaryValue, value))
                 throw new TypeError(`binary assert-object failed - expected ${JSON.stringify(value)}, found ${JSON.stringify(binaryValue)}`);
         }
+    },
+
+    inArray(key, value){
+        return function(){
+            if(!lodash.includes(value, this.vars[key]))
+                throw new TypeError(`binary assert-array failed - expected one of ${JSON.stringify(value)}, found ${this.vars[key]}`);
+        }
+    },
+
+    inArrayBounds(key, value){
+        return function(){
+            if(!value[this.vars[key]])
+                throw new TypeError(`binary assert-arraybounds failed - expected ${this.vars[key]} to be in array bounds of ${JSON.stringify(value)} (${value.length} items)`);
+        }
+    },
+
+    callback(key, fn, fnName = fn.name){
+        return function(){
+            if(!fn(this.vars[key]))
+                throw new TypeError(`binary assert-callback failed at ${fnName}(${this.vars[key]})`);
+        }
     }
 };

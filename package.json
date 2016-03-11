@@ -15,6 +15,7 @@
     "dissolve": "^0.3.3",
     "expect.js": "^0.3.1",
     "glob": "^7.0.3",
+    "gulp-watch": "^4.3.5",
     "lazy.js": "^0.4.2",
     "lodash": "^4.6.1",
     "winreg": "^1.0.1"
