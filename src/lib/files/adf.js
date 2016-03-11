@@ -3,6 +3,7 @@ const BinaryFile = require('./binary');
 const assert = require('../utilities/dissolve-assert');
 const dissolveHelpers = require('../utilities/dissolve-helpers');
 const _ = require('lazy.js');
+const typeDefinitionData = require('../data/type-definition');
 
 module.exports = class AdfFile extends BinaryFile {
 
@@ -18,19 +19,40 @@ module.exports = class AdfFile extends BinaryFile {
     static deserialize(buffer){
         let position = 0;
 
-        let headers = dissolveHelpers.parseBuffer(buffer, this.getHeaderParser());
-        let headerCommentString = dissolveHelpers.objectToString(headers.comment);
-        position += 0x40 + headers.comment.length;
+        let file = {};
 
-        if(headers.meta.typeDataEndOffset > buffer.length)
-            throw new TypeError(`binary assert bufferlength failed - expected buffer to be at least ${headers.meta.typeDataEndOffset}, is ${buffer.length}`);
+        file.headers = dissolveHelpers.parseBuffer(buffer, this.getHeaderParser());
+        file.headers.commentString = dissolveHelpers.objectToString(file.headers.comment);
+        position += 0x40 + file.headers.comment.length;
+
+        if(file.headers.meta.addressedFileSize > buffer.length)
+            throw new TypeError(`binary assert bufferlength failed - expected buffer to be at least ${file.headers.meta.addressedFileSize}, is ${buffer.length}`);
 
 
         let bufferWithoutHeaders = buffer.slice(position);
-        let typeDataBuffer = buffer.slice(headers.meta.typeDataStartOffset, headers.meta.typeDataEndOffset);
+
+        if(file.headers.meta.stringTableSize > 0){
+            let typeDataBuffer = buffer.slice(file.headers.meta.stringTableOffset);
+            file.stringTable = dissolveHelpers.parseBuffer(typeDataBuffer, this.getStringTableParser(file.headers.meta.stringTableSize));
+        }
+
+        if(file.headers.meta.typeTableSize > 0){
+            let typeTableBuffer = buffer.slice(file.headers.meta.typeTableOffset);
+            file.typeTable = dissolveHelpers.parseBuffer(typeTableBuffer, this.getTypeTableParser(file.stringTable, file.headers.meta.typeTableSize));
+        }
+
+        if(file.headers.meta.instanceTableSize > 0){
+            let instanceTableBuffer = buffer.slice(file.headers.meta.instanceTableOffset);
+            file.instanceTable = dissolveHelpers.parseBuffer(instanceTableBuffer, this.getInstanceTableParser(file.stringTable, file.headers.meta.instanceTableSize));
+        }
+
+        if(file.headers.meta.stringHashTableSize > 0){
+            let stringHashTableBuffer = buffer.slice(file.headers.meta.stringHashTableOffset);
+            file.stringHashTable = dissolveHelpers.parseBuffer(stringHashTableBuffer, this.getStringHashTableParser(file.stringTable, file.headers.meta.stringHashTableSize));
+        }
 
 
-        return headers;
+        return file;
     }
 
     static getHeaderParser(){
@@ -43,15 +65,15 @@ module.exports = class AdfFile extends BinaryFile {
             .tap(assert.equalObjectDeep('header', this.HEADER))
             .tap('meta', function(){
                 this
-                    .uint32('num2')
-                    .uint32('num3')
-                    .uint32('num4')
-                    .uint32('num5')
-                    .uint32('num6')
-                    .uint32('num7')
-                    .uint32('num8')
-                    .uint32('typeDataStartOffset')
-                    .uint32('typeDataEndOffset');
+                    .uint32('instanceTableSize')
+                    .uint32('instanceTableOffset')
+                    .uint32('typeTableSize')
+                    .uint32('typeTableOffset')
+                    .uint32('stringHashTableSize')
+                    .uint32('stringHashTableOffset')
+                    .uint32('stringTableSize')
+                    .uint32('stringTableOffset')
+                    .uint32('addressedFileSize');
             })
             .tap('saneChecks', function(){
                 this
@@ -68,6 +90,100 @@ module.exports = class AdfFile extends BinaryFile {
                         end(true);
                     }
                 });
+            });
+    }
+
+    static getStringTableParser(tableLength){
+        let currentEntry = 0;
+
+        return Dissolve()
+            .loop('sizes', function(end){
+                this.uint8('size');
+
+                if(++currentEntry > tableLength - 1){
+                    currentEntry = 0;
+                    end();
+                }
             })
+            .loop('strings', function(end){
+                this
+//                    .tap(dissolveHelpers.terminated('value'))
+                    .string('value', this.vars_list[0].sizes[currentEntry].size)
+                    .uint8('terminator')
+                    .tap(assert.equal('terminator', 0));
+
+                if(++currentEntry > this.vars_list[0].sizes.length - 1){
+                    end();
+                }
+            })
+            .tap(function(){
+                this.vars = this.vars.strings.map(str => str.value);
+            });
+    }
+
+    static getTypeTableParser(stringTable, tableLength){
+        let currentEntry = 0;
+
+        return Dissolve()
+            .loop('values', function(end){
+                this
+                    .uint32('type')
+                    .tap(assert.callback('type', typeDefinitionData.isValidType, 'typeDefinition.isValidType'))
+                    .tap(assert.inArray('type', typeDefinitionData.VALID_ROOT_TYPES))
+                    .uint32('size')
+                    .uint32('alignment')
+                    .uint32('namehash')
+                    .int64('nameStringIndex')
+                    .tap(dissolveHelpers.abs('nameStringIndex'))
+                    .tap(assert.inArrayBounds('nameStringIndex', stringTable))
+                    .tap(dissolveHelpers.getValueFromArray(stringTable, 'nameStringIndex', 'name'))
+                    .uint32('flags')
+                    .uint32('elementTypeHash')
+                    .uint32('elementLength')
+                    .tap(function(){
+                        typeDefinitionData.parse.call(this, stringTable, this.vars.type)
+                    });
+
+                if(++currentEntry > tableLength - 1){
+                    end();
+                }
+            });
+    }
+
+    static getInstanceTableParser(stringTable, tableLength){
+        let currentEntry = 0;
+
+        return Dissolve()
+            .loop('values', function(end){
+                this
+                    .uint32('namehash')
+                    .uint32('typehash')
+                    .uint32('offset')
+                    .uint32('size')
+                    .int64('nameStringIndex')
+                    .tap(dissolveHelpers.abs('nameStringIndex'))
+                    .tap(assert.inArrayBounds('nameStringIndex', stringTable))
+                    .tap(dissolveHelpers.getValueFromArray(stringTable, 'nameStringIndex', 'name'));
+
+                if(++currentEntry > tableLength - 1){
+                    end();
+                }
+            });
+    }
+
+    static getStringHashTableParser(stringTable, tableLength){
+        let currentEntry = 0;
+
+        return Dissolve()
+            .loop('values', function(end){
+                this
+                    .tap(dissolveHelpers.terminated('value'))
+                    .uint32('valuehash')
+                    .uint32('extra'); // TODO: Unknown
+
+                if(++currentEntry > tableLength - 1){
+                    end();
+                }
+            });
     }
 };
