@@ -24,11 +24,9 @@ let proj = new Project();
 
 PathHelper.tryGetInstallPath((err, path) => PathHelper.glob('./Just Cause 3', ['**/*.shader_bundle'], (err, paths) => {
     paths.forEach(path => fs.readFile(path, (err, buffer) => {
-        try {
+        //try {
             console.log(path, AdfFile.deserialize(buffer));
-        } catch(e){}
+        //} catch(e){}
     }));
     //fs.readFile(paths[0], (err, buffer) => console.log(AdfFile.deserialize(buffer)));
 }));
-
-console.log(require('dissolve')().pipe);
