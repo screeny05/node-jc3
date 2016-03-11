@@ -22,14 +22,10 @@ module.exports = class AdfFile extends BinaryFile {
         let file = {};
 
         file.headers = dissolveHelpers.parseBuffer(buffer, this.getHeaderParser());
-        file.headers.commentString = dissolveHelpers.objectToString(file.headers.comment);
-        position += 0x40 + file.headers.comment.length;
 
         if(file.headers.meta.addressedFileSize > buffer.length)
             throw new TypeError(`binary assert bufferlength failed - expected buffer to be at least ${file.headers.meta.addressedFileSize}, is ${buffer.length}`);
 
-
-        let bufferWithoutHeaders = buffer.slice(position);
 
         if(file.headers.meta.stringTableSize > 0){
             let typeDataBuffer = buffer.slice(file.headers.meta.stringTableOffset);
@@ -84,13 +80,8 @@ module.exports = class AdfFile extends BinaryFile {
                     .uint32('flag5');
             })
             .tap(assert.allEqualObject('saneChecks', 0))
-            .loop('comment', function(end){
-                this.uint8('byte').tap(function(){
-                    if(this.vars.byte === 0){
-                        end(true);
-                    }
-                });
-            });
+            .tap(dissolveHelpers.terminated('comment'))
+            .tap(dissolveHelpers.arrayToString('comment'))
     }
 
     static getStringTableParser(tableLength){
@@ -107,7 +98,6 @@ module.exports = class AdfFile extends BinaryFile {
             })
             .loop('strings', function(end){
                 this
-//                    .tap(dissolveHelpers.terminated('value'))
                     .string('value', this.vars_list[0].sizes[currentEntry].size)
                     .uint8('terminator')
                     .tap(assert.equal('terminator', 0));

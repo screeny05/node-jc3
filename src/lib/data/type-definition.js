@@ -22,8 +22,6 @@ let typeDefinitionData = module.exports = {
     parse(stringTable, type){
         let types = typeDefinitionData.TYPES;
 
-        console.log(typeDefinitionData.getTypeAsString(type));
-
         if(type === types.structure){
             this
                 .uint32('structSize')
