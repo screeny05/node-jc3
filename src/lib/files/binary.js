@@ -1,5 +1,9 @@
+const lodash = require('lodash');
+
 module.exports = class BinaryFile {
-    header = null;
+
+    constructor(){
+    }
 
     hasCorrectHeader(){
         return false;

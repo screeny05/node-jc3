@@ -47,6 +47,11 @@ let dissolveHelpers = module.exports = {
             });
         }
     },
+    loopedToArray(key = 'values'){
+        return function(){
+            this.vars = this.vars[key];
+        }
+    },
     debug(){
         console.log(this.vars);
     }

@@ -3,17 +3,27 @@ const BinaryFile = require('./binary');
 const assert = require('../utilities/dissolve-assert');
 const dissolveHelpers = require('../utilities/dissolve-helpers');
 const _ = require('lazy.js');
+const lodash = require('lodash');
 const typeDefinitionData = require('../data/type-definition');
 
 module.exports = class AdfFile extends BinaryFile {
+
+    headers = null;
+    stringTable = null;
+    typeTable = null;
+    instanceTable = null;
+    stringHashTable = null;
 
     static HEADER = {
         signature: 0x41444620,
         revision: 0x04
     }
 
-    constructor(data){
-        //console.log(data);
+    constructor(meta){
+        super(meta);
+        if(meta){
+            lodash.extend(this, meta);
+        }
     }
 
     static deserialize(buffer){
@@ -35,6 +45,7 @@ module.exports = class AdfFile extends BinaryFile {
         if(file.headers.meta.typeTableSize > 0){
             let typeTableBuffer = buffer.slice(file.headers.meta.typeTableOffset);
             file.typeTable = dissolveHelpers.parseBuffer(typeTableBuffer, this.getTypeTableParser(file.stringTable, file.headers.meta.typeTableSize));
+            this.populateTypeInfo(file.stringTable, file.typeTable);
         }
 
         if(file.headers.meta.instanceTableSize > 0){
@@ -47,8 +58,42 @@ module.exports = class AdfFile extends BinaryFile {
             file.stringHashTable = dissolveHelpers.parseBuffer(stringHashTableBuffer, this.getStringHashTableParser(file.stringTable, file.headers.meta.stringHashTableSize));
         }
 
+        if(file.instanceTable && file.typeTable){
+            file.instanceTable.forEach(instance => {
+                instance.type = file.typeTable.find(type => type.namehash === instance.typehash);
+                if(!instance.type)
+                    throw new TypeError(`No Type found for Instance of ${instance.typehash}`);
+            });
+        }
 
-        return file;
+        if(file.instanceTable){
+            file.instances = file.instanceTable.map(instance => {
+                let instanceBuffer = buffer.slice(instance.offset, instance.offset + instance.size);
+                if(instanceBuffer.length !== instance.size)
+                    throw new TypeError(`Expected instance ${instance.name} to be of length ${instance.size}, found ${instanceBuffer.length}`);
+
+                let instanceParser = typeDefinitionData.getParserForType(instance.type);
+                return instanceParser.parse(instanceBuffer, file, instance);
+            });
+        }
+
+
+        return new AdfFile(file);
+    }
+
+    static populateTypeInfo(stringTable, typeTable){
+        typeTable.map(type => {
+            if(type.type === typeDefinitionData.TYPES.structure && type.members){
+                type.members.map(member => {
+                    member.type = typeTable.find(searchType => searchType.namehash === member.typehash);
+                    return member;
+                });
+            } else if (type.type === typeDefinitionData.TYPES.array) {
+                type.elementType = typeTable.find(searchType => searchType.namehash === type.elementTypeHash);
+            }
+            return type;
+        });
+        console.log(JSON.stringify(typeTable, true, "  "));
     }
 
     static getHeaderParser(){
@@ -131,13 +176,14 @@ module.exports = class AdfFile extends BinaryFile {
                     .uint32('elementTypeHash')
                     .uint32('elementLength')
                     .tap(function(){
-                        typeDefinitionData.parse.call(this, stringTable, this.vars.type)
+                        typeDefinitionData.parseMeta.call(this, stringTable, this.vars.type)
                     });
 
                 if(++currentEntry > tableLength - 1){
                     end();
                 }
-            });
+            })
+            .tap(dissolveHelpers.loopedToArray());
     }
 
     static getInstanceTableParser(stringTable, tableLength){
@@ -158,7 +204,8 @@ module.exports = class AdfFile extends BinaryFile {
                 if(++currentEntry > tableLength - 1){
                     end();
                 }
-            });
+            })
+            .tap(dissolveHelpers.loopedToArray());
     }
 
     static getStringHashTableParser(stringTable, tableLength){
@@ -174,6 +221,7 @@ module.exports = class AdfFile extends BinaryFile {
                 if(++currentEntry > tableLength - 1){
                     end();
                 }
-            });
+            })
+            .tap(dissolveHelpers.loopedToArray());
     }
 };
