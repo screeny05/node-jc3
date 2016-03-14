@@ -1,6 +1,9 @@
 const lodash = require('lodash');
 const structData = require('./struct');
+const arrayData = require('./array');
+const primitiveData = require('./primitive');
 const assert = require('../utilities/dissolve-assert');
+const dissolveHelpers = require('../utilities/dissolve-helpers');
 
 let typeDefinitionData = module.exports = {
     TYPES: {
@@ -19,14 +22,14 @@ let typeDefinitionData = module.exports = {
         return lodash.includes(typeDefinitionData.TYPES_IDENTIFIERS, type);
     },
 
-    parse(stringTable, type){
+    parseMeta(stringTable, type){
         let types = typeDefinitionData.TYPES;
 
-        if(type === types.structure){
+        if(structData.isValidType(type)){
             this
                 .uint32('structSize')
                 .tap(function(){
-                    structData.parse.call(this, stringTable, this.vars.structSize);
+                    structData.parseMeta.call(this, stringTable, this.vars.structSize);
                 });
         } else if(lodash.includes([types.pointer, types.array, types.inlineArray, types.stringHash], type)){
             this
@@ -35,6 +38,23 @@ let typeDefinitionData = module.exports = {
         } else {
             throw new TypeError(`unsupported data-type ${typeDefinitionData.getTypeAsString(type)}(${type})`);
         }
+    },
+
+    getParserForType(type, typeTable){
+        type = typeof type === 'object' ? type.type : type;
+        let types = typeDefinitionData.TYPES;
+
+        if(structData.isValidType(type)){
+            return structData;
+        } else if(arrayData.isValidType(type)){
+            return arrayData;
+        } else if(primitiveData.isValidType(type)) {
+            return primitiveData;
+        } else if(typeTable) {
+            let typeInfo = typeTable.find(info => info.namehash === type);
+            return typeDefinitionData.getParserForType(typeInfo.elementTypeHash, typeTable);
+        }
+        throw new TypeError(`unsupported data-type ${typeDefinitionData.getTypeAsString(type)}(${type})`);
     },
 
     getTypeAsString(type){
