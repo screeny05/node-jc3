@@ -5,6 +5,7 @@ const dissolveHelpers = require('../utilities/dissolve-helpers');
 const _ = require('lazy.js');
 const lodash = require('lodash');
 const typeDefinitionData = require('../data/type-definition');
+const primitiveData = require('../data/primitive');
 
 module.exports = class AdfFile extends BinaryFile {
 
@@ -45,7 +46,8 @@ module.exports = class AdfFile extends BinaryFile {
         if(file.headers.meta.typeTableSize > 0){
             let typeTableBuffer = buffer.slice(file.headers.meta.typeTableOffset);
             file.typeTable = dissolveHelpers.parseBuffer(typeTableBuffer, this.getTypeTableParser(file.stringTable, file.headers.meta.typeTableSize));
-            this.populateTypeInfo(file.stringTable, file.typeTable);
+            file.typeTable = this.populateTypeInfo(file.stringTable, file.typeTable);
+            //console.log(JSON.stringify(file.typeTable, true, '  '));
         }
 
         if(file.headers.meta.instanceTableSize > 0){
@@ -58,22 +60,18 @@ module.exports = class AdfFile extends BinaryFile {
             file.stringHashTable = dissolveHelpers.parseBuffer(stringHashTableBuffer, this.getStringHashTableParser(file.stringTable, file.headers.meta.stringHashTableSize));
         }
 
-        if(file.instanceTable && file.typeTable){
-            file.instanceTable.forEach(instance => {
-                instance.type = file.typeTable.find(type => type.namehash === instance.typehash);
-                if(!instance.type)
-                    throw new TypeError(`No Type found for Instance of ${instance.typehash}`);
-            });
-        }
-
         if(file.instanceTable){
             file.instances = file.instanceTable.map(instance => {
                 let instanceBuffer = buffer.slice(instance.offset, instance.offset + instance.size);
                 if(instanceBuffer.length !== instance.size)
                     throw new TypeError(`Expected instance ${instance.name} to be of length ${instance.size}, found ${instanceBuffer.length}`);
 
-                let instanceParser = typeDefinitionData.getParserForType(instance.type);
-                return instanceParser.parse(instanceBuffer, file, instance);
+                instance.type = file.typeTable.find(searchType => searchType.namehash === instance.typehash);
+
+                let instanceData = instance.type.parse(instanceBuffer, instanceBuffer, file, instance);
+
+                console.log(JSON.stringify(instanceData, true, '  '));
+                return instanceData;
             });
         }
 
@@ -82,18 +80,46 @@ module.exports = class AdfFile extends BinaryFile {
     }
 
     static populateTypeInfo(stringTable, typeTable){
-        typeTable.map(type => {
-            if(type.type === typeDefinitionData.TYPES.structure && type.members){
-                type.members.map(member => {
+        return typeTable.map(type => this.populateType(stringTable, typeTable, type));
+    }
+
+    static populateType(stringTable, typeTable, type){
+        if(type.type === typeDefinitionData.TYPES.structure){
+            type.members.map(member => {
+                if(primitiveData.isValidType(member.typehash)){
+                    member.type = primitiveData;
+                    member.typename = primitiveData.getTypeAsString(member.typehash);
+                } else {
                     member.type = typeTable.find(searchType => searchType.namehash === member.typehash);
-                    return member;
-                });
-            } else if (type.type === typeDefinitionData.TYPES.array) {
+                }
+
+                type.parse = typeDefinitionData.getParserForType(type.type).parse;
+
+                if(!member.type){
+                    throw new TypeError(`found no matching type for struct-member ${JSON.stringify(member)}`);
+                }
+
+                return member;
+            });
+        } else if(type.type === typeDefinitionData.TYPES.array){
+            if(primitiveData.isValidType(type.elementTypeHash)){
+                type.elementType = primitiveData;
+                type.elementTypeName = primitiveData.getTypeAsString(type.elementTypeHash);
+            } else {
                 type.elementType = typeTable.find(searchType => searchType.namehash === type.elementTypeHash);
             }
-            return type;
-        });
-        console.log(JSON.stringify(typeTable, true, "  "));
+
+            type.parse = typeDefinitionData.getParserForType(type).parse;
+
+            if(!type.elementType){
+                throw new TypeError(`found no matching type for array-elements ${JSON.stringify(type)}`);
+            }
+        } else if(primitiveData.isValidType(type.typehash)){
+            type.parser = primitiveData.parse;
+        } else {
+            throw new TypeError(`no typeinfo found for ${JSON.stringify(type)}`);
+        }
+        return type;
     }
 
     static getHeaderParser(){
@@ -183,7 +209,7 @@ module.exports = class AdfFile extends BinaryFile {
                     end();
                 }
             })
-            .tap(dissolveHelpers.loopedToArray());
+            .tap(dissolveHelpers.keyToVar());
     }
 
     static getInstanceTableParser(stringTable, tableLength){
@@ -205,7 +231,7 @@ module.exports = class AdfFile extends BinaryFile {
                     end();
                 }
             })
-            .tap(dissolveHelpers.loopedToArray());
+            .tap(dissolveHelpers.keyToVar());
     }
 
     static getStringHashTableParser(stringTable, tableLength){
@@ -222,6 +248,6 @@ module.exports = class AdfFile extends BinaryFile {
                     end();
                 }
             })
-            .tap(dissolveHelpers.loopedToArray());
+            .tap(dissolveHelpers.keyToVar());
     }
 };

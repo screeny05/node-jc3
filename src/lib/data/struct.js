@@ -33,7 +33,8 @@ let structData = module.exports = {
             }
         });
     },
-    parse(buffer, file, instance){
+
+    parse(instanceBuffer, dataBuffer, file, instance){
         if(!structData.isValidType(instance.type))
             throw new TypeError(`invalid type - trying to parse data of type ${instance.type.name}(${instance.type.type}) as structure`);
 
@@ -42,13 +43,12 @@ let structData = module.exports = {
         let memberData = {};
 
         instance.type.members.forEach(member => {
-            let parser = typeDefinitionData.getParserForType(member.typehash, file.typeTable);
-            let memberBuffer = buffer.slice(member.offset);
-            console.log(memberData);
-            memberData[member.name] = { type: member.typehash, key: member.name, value: parser.parse(memberBuffer, file, member) };
-            //console.log(typeDefinitionData.getParserForType(member.typehash, file.typeTable).NAME);
+            let memberBuffer = instanceBuffer.slice(member.offset);
+            let parsedData = member.type.parse(memberBuffer, dataBuffer, file, member);
+            memberData[member.name] = { data: parsedData, instanceInfo: null };
         });
 
+        instance.data = memberData;
         return memberData;
     }
 }

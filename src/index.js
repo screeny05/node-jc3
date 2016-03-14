@@ -22,10 +22,10 @@ let proj = new Project();
 //    fs.readFile(paths[0], (err, buffer) => console.log(HashNamesFile.deserialize(buffer)));
 //}));
 
-PathHelper.tryGetInstallPath((err, path) => PathHelper.glob('./Just Cause 3', ['**/*.shader_bundle'], (err, paths) => {
+PathHelper.tryGetInstallPath((err, path) => PathHelper.glob('/Users/screeny/src/', ['**/*.shader_bundle'], (err, paths) => {
     paths.forEach(path => fs.readFile(path, (err, buffer) => {
         //try {
-            console.log(path, AdfFile.deserialize(buffer));
+            AdfFile.deserialize(buffer);
         //} catch(e){}
     }));
     //fs.readFile(paths[0], (err, buffer) => console.log(AdfFile.deserialize(buffer)));

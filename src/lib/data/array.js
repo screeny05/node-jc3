@@ -11,6 +11,15 @@ let arrayData = module.exports = {
         return type == require('./type-definition').TYPES.array;
     },
 
-    parse(buffer, file, instance){
+    parse(instanceBuffer, dataBuffer, file, instance){
+        let metaParser = Dissolve()
+            .int64('offset')
+            .tap(dissolveHelpers.abs('offset'))
+            .int64('count')
+            .tap(dissolveHelpers.abs('count'));
+
+        let meta = dissolveHelpers.parseBuffer(instanceBuffer, metaParser);
+
+        dataBuffer = dataBuffer.slice(meta.offset);
     }
 }

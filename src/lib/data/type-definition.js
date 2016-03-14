@@ -40,7 +40,7 @@ let typeDefinitionData = module.exports = {
         }
     },
 
-    getParserForType(type, typeTable){
+    getParserForType(type){
         type = typeof type === 'object' ? type.type : type;
         let types = typeDefinitionData.TYPES;
 
@@ -50,9 +50,6 @@ let typeDefinitionData = module.exports = {
             return arrayData;
         } else if(primitiveData.isValidType(type)) {
             return primitiveData;
-        } else if(typeTable) {
-            let typeInfo = typeTable.find(info => info.namehash === type);
-            return typeDefinitionData.getParserForType(typeInfo.elementTypeHash, typeTable);
         }
         throw new TypeError(`unsupported data-type ${typeDefinitionData.getTypeAsString(type)}(${type})`);
     },

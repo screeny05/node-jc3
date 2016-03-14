@@ -12,9 +12,13 @@ let dissolveHelpers = module.exports = {
         parser.write(buffer);
         return parser.vars_list.length > 0 ? parser.vars_list[0] : parser.vars;
     },
-    arrayToString(key, encoding = 'ascii'){
+    arrayToString(key = 'values', encoding = 'ascii'){
         return function(){
-            this.vars[key] = new Buffer(this.vars[key]).toString(encoding);
+            if(this.vars[key].length === 0){
+                this.vars[key] = '';
+            } else {
+                this.vars[key] = new Buffer(this.vars[key]).toString(encoding);
+            }
         }
     },
     getValueFromArray(valueTable, key, assignTo){
@@ -32,7 +36,7 @@ let dissolveHelpers = module.exports = {
             this.vars[key] = Math.abs(this.vars[key]);
         }
     },
-    terminated(key, terminator = 0, type = 'uint8'){
+    terminated(key = 'values', terminator = 0, type = 'uint8'){
         return function(){
             this.loop(key, function(end){
                 this
@@ -47,7 +51,7 @@ let dissolveHelpers = module.exports = {
             });
         }
     },
-    loopedToArray(key = 'values'){
+    keyToVar(key = 'values'){
         return function(){
             this.vars = this.vars[key];
         }
