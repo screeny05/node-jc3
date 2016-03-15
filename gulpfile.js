@@ -11,6 +11,7 @@ gulp.task('watch', function(){
     return nodemon({
         script: MAIN_SCRIPT,
         ext: 'js',
+        ignore: 'dist/**',
         env: {
             NODE_ENV: 'development'
         },

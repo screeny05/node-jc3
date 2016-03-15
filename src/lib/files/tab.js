@@ -13,7 +13,7 @@ module.exports = class TabFile extends BinaryFile {
     }
 
     constructor(data){
-        console.log(data);
+        this.data = data;
     }
 
     static getParser(){

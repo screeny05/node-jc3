@@ -4,7 +4,7 @@ module.exports = class HashNamesFile {
     static LINE_REGEX = /(0x[0-9a-fA-F]+?)\s+(0x[0-9a-fA-F]+?)\s+(0x[0-9a-fA-F]+?)\s+(?:0x[0-9a-fA-F]+?)\s+(.*)/;
 
     constructor(data){
-        console.log(data);
+        this.data = data;
     }
 
     static deserialize(buffer){

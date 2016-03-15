@@ -5,28 +5,19 @@ const HashNamesFile = require('./lib/files/hash-names');
 const Project = require('./project');
 const fs = require('fs');
 
+PathHelper.tryGetInstallPath((err, path) => {
+    if(err || !path)
+        path = '/Users/screeny/src/Just Cause 3';
 
-let proj = new Project();
+    let currentProject = new Project(path);
+    currentProject.loadDataFiles(()=>{});
+});
 
-//PathHelper.tryGetInstallPath((err, path) => PathHelper.glob(path, '**/*.tab', (err, paths) => {
-//    paths.forEach(path => fs.readFile(path, (err, buffer) => TabFile.deserialize(buffer)));
-//    fs.readFile(paths[0], (err, buffer) => {
-//        let file = TabFile.deserialize(buffer);
-//        let copyFile = TabFile.deserialize(TabFile.serialize(file));
-//        console.log('eq', require('lodash').isEqual(file, copyFile));
-//    });
-//}));
-//
-//PathHelper.tryGetInstallPath((err, path) => PathHelper.glob(path, '**/*_hash_names*.txt', (err, paths) => {
-//    paths.forEach(path => fs.readFile(path, (err, buffer) => TabFile.deserialize(buffer)));
-//    fs.readFile(paths[0], (err, buffer) => console.log(HashNamesFile.deserialize(buffer)));
-//}));
-
-PathHelper.tryGetInstallPath((err, path) => PathHelper.glob('/Users/screeny/src/', ['**/*.shader_bundle'], (err, paths) => {
-    paths.forEach(path => fs.readFile(path, (err, buffer) => {
+//PathHelper.tryGetInstallPath((err, path) => PathHelper.glob('/Users/screeny/src/', ['**/*.shader_bundle'], (err, paths) => {
+    //paths.forEach(path => fs.readFile(path, (err, buffer) => {
         //try {
-            AdfFile.deserialize(buffer);
+            //fs.writeFileSync(JSON.stringify('data.json', AdfFile.deserialize(buffer), true, "  "), 'utf8');
         //} catch(e){}
-    }));
+    //}));
     //fs.readFile(paths[0], (err, buffer) => console.log(AdfFile.deserialize(buffer)));
-}));
+//}));

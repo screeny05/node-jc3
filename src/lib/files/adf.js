@@ -47,7 +47,6 @@ module.exports = class AdfFile extends BinaryFile {
             let typeTableBuffer = buffer.slice(file.headers.meta.typeTableOffset);
             file.typeTable = dissolveHelpers.parseBuffer(typeTableBuffer, this.getTypeTableParser(file.stringTable, file.headers.meta.typeTableSize));
             file.typeTable = this.populateTypeInfo(file.stringTable, file.typeTable);
-            //console.log(JSON.stringify(file.typeTable, true, '  '));
         }
 
         if(file.headers.meta.instanceTableSize > 0){
@@ -60,6 +59,7 @@ module.exports = class AdfFile extends BinaryFile {
             file.stringHashTable = dissolveHelpers.parseBuffer(stringHashTableBuffer, this.getStringHashTableParser(file.stringTable, file.headers.meta.stringHashTableSize));
         }
 
+        console.log('start parsing instances');
         if(file.instanceTable){
             file.instances = file.instanceTable.map(instance => {
                 let instanceBuffer = buffer.slice(instance.offset, instance.offset + instance.size);
@@ -69,13 +69,11 @@ module.exports = class AdfFile extends BinaryFile {
                 instance.type = file.typeTable.find(searchType => searchType.namehash === instance.typehash);
 
                 let instanceData = instance.type.parse(instanceBuffer, instanceBuffer, file, instance);
-
-                console.log(JSON.stringify(instanceData, true, '  '));
                 return instanceData;
             });
         }
 
-
+        console.log('finished parsing');
         return new AdfFile(file);
     }
 
@@ -105,8 +103,10 @@ module.exports = class AdfFile extends BinaryFile {
             if(primitiveData.isValidType(type.elementTypeHash)){
                 type.elementType = primitiveData;
                 type.elementTypeName = primitiveData.getTypeAsString(type.elementTypeHash);
+                type.elementSize = primitiveData.getSize(type.elementTypeHash);
             } else {
                 type.elementType = typeTable.find(searchType => searchType.namehash === type.elementTypeHash);
+                type.elementSize = type.elementType.size;
             }
 
             type.parse = typeDefinitionData.getParserForType(type).parse;
@@ -115,7 +115,7 @@ module.exports = class AdfFile extends BinaryFile {
                 throw new TypeError(`found no matching type for array-elements ${JSON.stringify(type)}`);
             }
         } else if(primitiveData.isValidType(type.typehash)){
-            type.parser = primitiveData.parse;
+            type.parse = primitiveData.parse;
         } else {
             throw new TypeError(`no typeinfo found for ${JSON.stringify(type)}`);
         }

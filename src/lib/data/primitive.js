@@ -20,21 +20,33 @@ let primitiveData = module.exports = {
         float: 0x7515a207
     },
 
+    SIZES: {
+        string: NaN,
+        uint64: 8,
+        sint64: 8,
+        uint32: 4,
+        sint32: 4,
+        uint16: 2,
+        uint8: 1,
+        sint8: 1,
+        float: 4
+    },
+
     parse(instanceBuffer, dataBuffer, file, instance){
         let types = primitiveData.PRIMITIVES;
-        let type = instance.typehash;
+        let type = typeof instance.typehash !== 'undefined' ? instance.typehash : instance.elementTypeHash;
 
         switch (type) {
             case types.string: return primitiveData.parseAsString(instanceBuffer, dataBuffer);
             case types.uint64: return primitiveData.parseAsType('uint64', instanceBuffer, dataBuffer);
-            case types.sint64: return primitiveData.parseAsType('int64', instanceBuffer, dataBuffer);
+            case types.sint64: return primitiveData.parseAsType('int64',  instanceBuffer, dataBuffer);
             case types.uint32: return primitiveData.parseAsType('uint32', instanceBuffer, dataBuffer);
-            case types.sint32: return primitiveData.parseAsType('int32', instanceBuffer, dataBuffer);
+            case types.sint32: return primitiveData.parseAsType('int32',  instanceBuffer, dataBuffer);
             case types.uint16: return primitiveData.parseAsType('uint16', instanceBuffer, dataBuffer);
-            case types.uint8: return primitiveData.parseAsType('uint8', instanceBuffer, dataBuffer);
-            case types.sint8: return primitiveData.parseAsType('int8', instanceBuffer, dataBuffer);
-            case types.float: return primitiveData.parseAsType('float', instanceBuffer, dataBuffer);
-            default: throw new TypeError(`unknown type, ${type} is not a primitive`)
+            case types.uint8:  return primitiveData.parseAsType('uint8',  instanceBuffer, dataBuffer);
+            case types.sint8:  return primitiveData.parseAsType('int8',   instanceBuffer, dataBuffer);
+            case types.float:  return primitiveData.parseAsType('float',  instanceBuffer, dataBuffer);
+            default: throw new TypeError(`unknown type, ${type} is not a primitive`);
         }
     },
 
@@ -56,7 +68,9 @@ let primitiveData = module.exports = {
     },
 
     parseAsType(type, instanceBuffer){
-        let parser = Dissolve()[type]('value');
+        let parser = Dissolve()
+            [type]('value')
+            .tap(dissolveHelpers.keyToVar('value'));
         return dissolveHelpers.parseBuffer(instanceBuffer, parser);
     },
 
@@ -67,5 +81,9 @@ let primitiveData = module.exports = {
 
     getTypeAsString(type){
         return lodash.invert(primitiveData.PRIMITIVES)[type];
+    },
+
+    getSize(type){
+        return primitiveData.SIZES[primitiveData.getTypeAsString(type)];
     }
 }

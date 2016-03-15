@@ -42,6 +42,7 @@ let structData = module.exports = {
 
         let memberData = {};
 
+        //console.log('structmember:', instance);
         instance.type.members.forEach(member => {
             let memberBuffer = instanceBuffer.slice(member.offset);
             let parsedData = member.type.parse(memberBuffer, dataBuffer, file, member);
