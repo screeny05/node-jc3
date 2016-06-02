@@ -30,6 +30,7 @@ module.exports = class Project extends EventEmitter {
 
             this.hashNamesFiles = data.hashNamesFiles;
             this.tabFiles = data.tabFiles;
+            fn();
         });
     }
 
