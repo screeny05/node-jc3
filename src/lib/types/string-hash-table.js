@@ -11,9 +11,10 @@ Corrode.addExtension('stringHashTable', function(length){
     this
         .loopMax('values', length, function(){
             this
-                .array('value')
+                .terminatedString('value')
                 .uint32('valuehash')
                 .uint32('extra');
         })
+        .assert.arrayLength('values', length)
         .pushVars();
 });

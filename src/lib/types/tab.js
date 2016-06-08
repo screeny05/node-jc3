@@ -9,16 +9,13 @@ const HEADER = {
 };
 
 /**
- * @return {
- *     header HEADER,
- *     files [{
- *         namehash uint32,
- *         offset uint32,
- *         size uint32
- *     }]
- * }
+ * @return [{
+ *     namehash uint32,
+ *     offset uint32,
+ *     size uint32
+ * }]
  */
-Corrode.addExtension('tab', function(){
+Corrode.addExtension('tab', function(hashNamesTable){
     this
         .tap('header', function(){
             this
@@ -29,10 +26,36 @@ Corrode.addExtension('tab', function(){
         })
         .assert.deepEqualObject('header', HEADER)
 
-        .loop('files', function(){
+        .loop('values', function(end, discard){
             this
                 .uint32('namehash')
                 .uint32('offset')
-                .uint32('size');
-        });
+                .uint32('size')
+                .tap(function(){
+                    if(!this.vars.namehash){
+                        return discard();
+                    }
+
+                    this.vars.name = null;
+
+                    if(!hashNamesTable){
+                        return;
+                    }
+
+                    // get the name from the tabfile
+                    let filtered = hashNamesTable.filter(item => item.hash === this.vars.namehash && item.offset === this.vars.offset);
+                    if(filtered.length === 0){
+                        return;
+                    }
+                    let hashNameEntry = filtered[0];
+
+                    // check if it's the same entry
+                    this
+                        .assert.equal('offset', hashNameEntry.offset)
+                        .assert.equal('size', hashNameEntry.size);
+
+                    this.vars.name = hashNameEntry.name;
+                });
+        })
+        .pushVars()
 });

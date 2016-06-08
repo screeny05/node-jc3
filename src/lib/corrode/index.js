@@ -1,6 +1,8 @@
 const Dissolve = require('./dissolve-own');
 const utils = require('./utils');
 
+const fnName = require('function-name');
+
 const EXTENSIONS = {};
 const MAPPERS = require('./map');
 const ASSERTIONS = require('./assert');
@@ -15,10 +17,15 @@ class Corrode extends Dissolve {
     }
 
     loopMax(name, length, fn){
+        if(length === 0){
+            this.vars[name] = [];
+            return this;
+        }
+
         let currentPosition = 0;
 
-        let loopGuard = function(end){
-            fn.call(this, currentPosition, end);
+        let loopGuard = function(end, discard){
+            fn.call(this, currentPosition, end, discard);
 
             if(++currentPosition > length - 1){
                 currentPosition = 0;
@@ -79,6 +86,18 @@ class Corrode extends Dissolve {
             .map.fromArray(name, array);
     }
 
+    position(offset){
+        return this
+            .tap(function(){
+                if(typeof offset === 'string'){
+                    this.assert.exists(offset);
+                    offset = this.vars[offset];
+                }
+
+                this.skip(offset - this.streamOffset);
+            });
+    }
+
     pushVars(name = 'values'){
         return this
             .assert.exists(name)
@@ -104,6 +123,8 @@ module.exports = function(){
 };
 
 module.exports.addExtension = function(name, fn){
+    fnName(fn, name);
+
     EXTENSIONS[name] = function(name = 'values', ...args){
         return this.tap(name, function(){
             fn.apply(this, args);

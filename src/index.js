@@ -14,13 +14,36 @@ const jc3Types = require('./lib/types');
         path = '/Users/screeny/src/Just Cause 3';
 });*/
 
+let hashNamesFile = '/Users/screeny/src/Just Cause 3/archives_win64/game_hash_names0.txt';
+let tabFile = '/Users/screeny/src/Just Cause 3/archives_win64/game0.tab';
+let arcFile = '/Users/screeny/src/Just Cause 3/archives_win64/game0.arc';
 
-let hashStream = fs.createReadStream('/Users/screeny/src/Just Cause 3/archives_win64/game_hash_names0.txt');
-let hashCorrode = Corrode().ext.hashNamesTable().pushVars()
+let hashNamesStream = fs.createReadStream(hashNamesFile);
+let hashNamesCorrode = Corrode().ext.hashNamesTable().pushVars();
 
-hashStream
-    .pipe(hashCorrode)
-    .on('finish', () => console.log(JSON.stringify(hashCorrode.varStack, null, 2)));
+
+hashNamesStream.pipe(hashNamesCorrode);
+hashNamesCorrode.on('finish', function(){
+    let tabStream = fs.createReadStream(tabFile);
+    let tabCorrode = Corrode().ext.tab('values', hashNamesCorrode.vars).pushVars();
+
+    tabStream.pipe(tabCorrode);
+    tabCorrode.on('finish', function(){
+        let arcStream = fs.createReadStream(arcFile);
+        let arcEntryCorrode = Corrode({ unwindChunks: false }).ext.arcEntry('values', tabCorrode.vars[1]).pushVars();
+
+        arcStream.pipe(arcEntryCorrode);
+        arcEntryCorrode.on('finish', function(){
+            let adfData = arcEntryCorrode.vars.data;
+            let adfCorrode = Corrode().ext.adf('values').pushVars();
+
+            adfCorrode.write(adfData);
+            console.log(adfCorrode.vars);
+        });
+    });
+});
+
+
 
 
 

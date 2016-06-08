@@ -22,7 +22,7 @@ module.exports = {
      * @throws TypeError assertion-error
      */
     allEqualObject(name, value){
-        let notEqualObjects = _(utils.cloneWithoutProto(this.vars[name]))
+        let notEqualObjects = _(this.vars[name])
             .keys()
             .filter(subkey => this.vars[name][subkey] !== value)
             .value();
@@ -38,7 +38,7 @@ module.exports = {
      * @throws TypeError assertion-error
      */
     deepEqualObject(name, value){
-        let binaryValue = utils.cloneWithoutProto(this.vars[name]);
+        let binaryValue = this.vars[name];
         if(!lodash.isEqual(binaryValue, value))
             throw new TypeError(`Expected ${JSON.stringify(value)}, found ${JSON.stringify(binaryValue)}`);
     },
@@ -64,7 +64,7 @@ module.exports = {
         let index = this.vars[name];
 
         if(index < 0 || index >= value.length)
-            throw new TypeError(`Expected Array of ${value.length} items to be at least ${this.vars[name]}`);
+            throw new TypeError(`Expected Array of ${value.length} items to be at least ${this.vars[name]} long`);
     },
 
     /**
@@ -80,13 +80,14 @@ module.exports = {
     },
 
     /**
-     * assert var_list to be a given length
+     * assert array to be a given length
+     * @param {string}   name   key of the value to test
      * @param {number} length comparision
      * @throws TypeError assertion-error
      */
-    varsListLength(length){
-        if(typeof this.vars_list === 'undefined' || this.vars_list.length !== length)
-            throw new TypeError(`Expected context to have ${length} vars, has ${this.vars_list.length}`);
+    arrayLength(name, length){
+        if(typeof this.vars[name] === 'undefined' || this.vars[name].length !== length)
+            throw new TypeError(`Expected array to have a length of ${length}, has ${this.vars[name].length}`);
     },
 
     exists(name){

@@ -1,6 +1,6 @@
 module.exports = {
-    adfMeta:         require('./adf-meta'),
-    arrayMeta:       require('./array-meta'),
+    adf:             require('./adf'),
+    arc:             require('./arc'),
     array:           require('./array'),
     hashNamesTable:  require('./hash-names-table'),
     instanceTable:   require('./instance-table'),
@@ -8,7 +8,7 @@ module.exports = {
     primitive:       require('./primitive'),
     stringHashTable: require('./string-hash-table'),
     stringTable:     require('./string-table'),
-    structureMeta:   require('./structure-meta'),
+    structure:       require('./structure'),
     tab:             require('./tab'),
     typeTable:       require('./type-table'),
 };

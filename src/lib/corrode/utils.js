@@ -1,12 +1,5 @@
 const lodash = require('lodash');
 
-exports.cloneWithoutProto = function(obj){
-    let clonedObject = lodash.cloneDeep(obj);
-    if(clonedObject.__proto__)
-        delete clonedObject.__proto__;
-    return clonedObject;
-};
-
 exports.tapBindObject = function(obj, ctx){
     return lodash.mapValues(obj, function(fn){
         return function(...args){

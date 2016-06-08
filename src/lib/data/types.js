@@ -1,17 +1,15 @@
 const lodash = require('lodash');
 
-module.exports = {};
-
 exports.TYPE_IDS = {
-    primitive:   0x0,
-    structure:   0x1,
-    pointer:     0x2,
-    array:       0x3,
-    inlineArray: 0x4,
-    string:      0x5,
-    bitField:    0x7,
-    enumeration: 0x8,
-    stringHash:  0x9
+    primitive:   0x00,
+    structure:   0x01,
+    pointer:     0x02,
+    array:       0x03,
+    inlineArray: 0x04,
+    string:      0x05,
+    bitField:    0x07,
+    enumeration: 0x08,
+    stringHash:  0x09
 };
 
 exports.PRIMITIVE_TYPE_IDS = {

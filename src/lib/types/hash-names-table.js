@@ -21,15 +21,13 @@ Corrode.addExtension('hashNamesTable', function(){
                     return discard();
                 }
 
-                this.vars.values = {
+                this.vars = {
                     hash: parseInt(match[1]),
                     offset: parseInt(match[2]),
                     size: parseInt(match[3]),
                     name: match[4]
                 };
-
-                this.pushVars();
-            })
+            });
     })
     .pushVars();
 });

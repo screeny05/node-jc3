@@ -9,16 +9,15 @@ Corrode.addExtension('stringTable', function(length){
         .loopMax('sizes', length, function(){
             this.uint8('size');
         })
-        .assert.varsListLength('sizes', length)
+        .assert.arrayLength('sizes', length)
 
         // get the strings with the given size, terminated by a zero
-        .loopMax('strings', length, function(string){
+        .loopMax('values', length, function(string){
             this
-                .string('value', this.vars_list[0].sizes[string].size)
+                .string('values', this.varStack.getValueAbove().sizes[string].size)
                 .uint8('terminator')
-                .assert.equal('terminator', 0);
+                .assert.equal('terminator', 0)
+                .pushVars();
         })
-        .tap(function(){
-            this.vars = this.vars.strings.map(str => str.value);
-        });
+        .pushVars();
 });

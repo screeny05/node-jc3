@@ -17,9 +17,15 @@ class VariableStack {
         this.top.value = val;
     }
 
+    getValueAbove(layerCount = 1){
+        return this.stack[this.stack.length - 1 - layerCount].value;
+    }
+
     push(name, value = {}){
         if(this.top.value[name]){
             value = this.value;
+        } else {
+            this.top.value[name] = value;
         }
 
         this.stack.push({
@@ -52,13 +58,16 @@ module.exports = class Dissolve extends Transform {
     jobs = [];
     varStack = new VariableStack();
     buffer = new BufferList();
-    offset = 0;
+    streamOffset = 0;
+    chunkOffset = 0;
 
     static defaults = {
         endianness: 'le',
         loopVarName: '__loop_tmp',
         encoding: 'utf8',
-        shortenOnEOF: true
+        shortenOnEOF: false,
+        unwindChunks: true,
+        popAllOnEOF: false
     };
 
     get vars(){
@@ -76,10 +85,15 @@ module.exports = class Dissolve extends Transform {
             ...Dissolve.defaults,
             ...options
         };
+
+        if(this.options.popAllOnEOF){
+            // TODO: decouple _transform tasks, so we can instead just call unwindRemainingJobs
+            this.on('finish', ::this.varStack.popAll);
+        }
     }
 
     _transform(chunk, encoding, done){
-        this.offset = 0;
+        this.chunkOffset = 0;
 
         this.buffer.append(chunk);
 
@@ -154,16 +168,16 @@ module.exports = class Dissolve extends Transform {
                 length = job.length;
             }
 
-            let remainingBuffer = this.buffer.length - this.offset;
+            let remainingBuffer = this.buffer.length - this.chunkOffset;
 
-            if(this.options.shortenOnEOF && remainingBuffer > 0 && remainingBuffer <= length && (job.type === 'buffer' || job.type === 'string')){
+            if(this.options.shortenOnEOF && remainingBuffer > 0 && remainingBuffer <= length && (job.type === 'blob' || job.type === 'string')){
                 length = remainingBuffer;
             }
 
-            // break on end of buffer
-            if(this.buffer.length - this.offset < length){
+            // break on end of buffer (wait if we're not unwinding yet)
+            if(this.buffer.length - this.chunkOffset < length){
 
-                if(this.jobs.length > 0){
+                if(this.options.unwindChunks && this.jobs.length > 0){
                     // unwind loop, by removing the loop job
                     this.unwindRemainingJobs();
                     continue;
@@ -171,60 +185,60 @@ module.exports = class Dissolve extends Transform {
                 break;
             }
 
-            if(job.type === 'buffer'){
+            if(job.type === 'blob'){
                 this.jobs.shift();
-                this.vars[job.name] = this.buffer.slice(this.offset, this.offset + length);
-                this.offset += length;
+                this.vars[job.name] = this.buffer.slice(this.chunkOffset, this.chunkOffset + length);
+                this.moveOffset(length);
                 continue;
 
             } else if(job.type === 'string'){
                 this.jobs.shift();
-                this.vars[job.name] = this.buffer.toString(job.encoding, this.offset, this.offset + length);
-                this.offset += length;
+                this.vars[job.name] = this.buffer.toString(job.encoding, this.chunkOffset, this.chunkOffset + length);
+                this.moveOffset(length);
                 continue;
 
             } else if(job.type === 'skip'){
                 this.jobs.shift();
-                this.offset += length;
+                this.moveOffset(length);
                 continue;
 
             } else {
                 switch (job.type) {
-                    case "int8le":  { this.vars[job.name] = this.buffer.readInt8(this.offset);  break; }
-                    case "int8be":  { this.vars[job.name] = this.buffer.readInt8(this.offset);  break; }
-                    case "uint8le": { this.vars[job.name] = this.buffer.readUInt8(this.offset); break; }
-                    case "uint8be": { this.vars[job.name] = this.buffer.readUInt8(this.offset); break; }
+                    case "int8le":  { this.vars[job.name] = this.buffer.readInt8(this.chunkOffset);  break; }
+                    case "int8be":  { this.vars[job.name] = this.buffer.readInt8(this.chunkOffset);  break; }
+                    case "uint8le": { this.vars[job.name] = this.buffer.readUInt8(this.chunkOffset); break; }
+                    case "uint8be": { this.vars[job.name] = this.buffer.readUInt8(this.chunkOffset); break; }
 
-                    case "int16le":  { this.vars[job.name] = this.buffer.readInt16LE(this.offset);  break; }
-                    case "int16be":  { this.vars[job.name] = this.buffer.readInt16BE(this.offset);  break; }
-                    case "uint16le": { this.vars[job.name] = this.buffer.readUInt16LE(this.offset); break; }
-                    case "uint16be": { this.vars[job.name] = this.buffer.readUInt16BE(this.offset); break; }
+                    case "int16le":  { this.vars[job.name] = this.buffer.readInt16LE(this.chunkOffset);  break; }
+                    case "int16be":  { this.vars[job.name] = this.buffer.readInt16BE(this.chunkOffset);  break; }
+                    case "uint16le": { this.vars[job.name] = this.buffer.readUInt16LE(this.chunkOffset); break; }
+                    case "uint16be": { this.vars[job.name] = this.buffer.readUInt16BE(this.chunkOffset); break; }
 
-                    case "int32le":  { this.vars[job.name] = this.buffer.readInt32LE(this.offset);  break; }
-                    case "int32be":  { this.vars[job.name] = this.buffer.readInt32BE(this.offset);  break; }
-                    case "uint32le": { this.vars[job.name] = this.buffer.readUInt32LE(this.offset); break; }
-                    case "uint32be": { this.vars[job.name] = this.buffer.readUInt32BE(this.offset); break; }
+                    case "int32le":  { this.vars[job.name] = this.buffer.readInt32LE(this.chunkOffset);  break; }
+                    case "int32be":  { this.vars[job.name] = this.buffer.readInt32BE(this.chunkOffset);  break; }
+                    case "uint32le": { this.vars[job.name] = this.buffer.readUInt32LE(this.chunkOffset); break; }
+                    case "uint32be": { this.vars[job.name] = this.buffer.readUInt32BE(this.chunkOffset); break; }
 
-                    case "int64le":  { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readInt32LE(this.offset + 4)) + ((this.buffer[this.offset + 4] & 0x80 === 0x80 ? 1 : -1) * this.buffer.readUInt32LE(this.offset)); break; }
-                    case "int64be":  { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readInt32BE(this.offset)) + ((this.buffer[this.offset] & 0x80 === 0x80 ? 1 : -1) * this.buffer.readUInt32BE(this.offset + 4)); break; }
-                    case "uint64le": { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readUInt32LE(this.offset + 4)) + this.buffer.readUInt32LE(this.offset); break; }
-                    case "uint64be": { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readUInt32BE(this.offset)) + this.buffer.readUInt32BE(this.offset + 4); break; }
+                    case "int64le":  { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readInt32LE(this.chunkOffset + 4)) + ((this.buffer[this.chunkOffset + 4] & 0x80 === 0x80 ? 1 : -1) * this.buffer.readUInt32LE(this.chunkOffset)); break; }
+                    case "int64be":  { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readInt32BE(this.chunkOffset)) + ((this.buffer[this.chunkOffset] & 0x80 === 0x80 ? 1 : -1) * this.buffer.readUInt32BE(this.chunkOffset + 4)); break; }
+                    case "uint64le": { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readUInt32LE(this.chunkOffset + 4)) + this.buffer.readUInt32LE(this.chunkOffset); break; }
+                    case "uint64be": { this.vars[job.name] = (Math.pow(2, 32) * this.buffer.readUInt32BE(this.chunkOffset)) + this.buffer.readUInt32BE(this.chunkOffset + 4); break; }
 
-                    case "floatle":  { this.vars[job.name] = this.buffer.readFloatLE(this.offset);  break; }
-                    case "floatbe":  { this.vars[job.name] = this.buffer.readFloatBE(this.offset);  break; }
+                    case "floatle":  { this.vars[job.name] = this.buffer.readFloatLE(this.chunkOffset);  break; }
+                    case "floatbe":  { this.vars[job.name] = this.buffer.readFloatBE(this.chunkOffset);  break; }
 
-                    case "doublele": { this.vars[job.name] = this.buffer.readDoubleLE(this.offset); break; }
-                    case "doublebe": { this.vars[job.name] = this.buffer.readDoubleBE(this.offset); break; }
+                    case "doublele": { this.vars[job.name] = this.buffer.readDoubleLE(this.chunkOffset); break; }
+                    case "doublebe": { this.vars[job.name] = this.buffer.readDoubleBE(this.chunkOffset); break; }
                     default: { return done(new Error(`invalid job type ${job.type}`)); }
                 }
 
                 this.jobs.shift();
-                this.offset += length;
+                this.moveOffset(length);
             }
         }
 
-        this.push(null);
-        this.buffer.consume(this.offset);
+        super.push(null);
+        this.buffer.consume(this.chunkOffset);
         return done();
     }
 
@@ -239,6 +253,11 @@ module.exports = class Dissolve extends Transform {
 
         this.jobs.splice(0);
         this.jobs.push(...filteredJobs);
+    }
+
+    moveOffset(by){
+        this.chunkOffset += by;
+        this.streamOffset += by;
     }
 
     pushJob(name, type, length, options){
@@ -322,7 +341,7 @@ module.exports = class Dissolve extends Transform {
         return this;
     }
 
-    buffer(name, length){ return this.pushJob(name, 'buffer', length); }
+    blob(name, length){ return this.pushJob(name, 'blob', length); }
     string(name, length, encoding = this.options.encoding){ return this.pushJob(name, 'string', length, { encoding }); }
 
     int8(name){ return this.pushJob(name, 'int8' + this.options.endianness, 1); }

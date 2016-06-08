@@ -1,6 +1,6 @@
 const Corrode = require('../corrode');
 
-const types = require('../data/type-definition');
+const types = require('../data/types');
 
 /**
  * @param {array}  strings stringTable
@@ -13,7 +13,7 @@ const types = require('../data/type-definition');
  *     flags uint32,
  *     elementTypeHash uint32,
  *     elementLength uint32,
- *     typeMeta object
+ *     meta {<primitiveMeta>}
  * }]
  */
 Corrode.addExtension('typeTable', function(strings, length){
@@ -32,7 +32,9 @@ Corrode.addExtension('typeTable', function(strings, length){
                 .uint32('flags')
                 .uint32('elementTypeHash')
                 .uint32('elementLength')
-                .ext.primitiveMeta('typeMeta', strings, this.vars.typeId);
+                .tap(function(){
+                    this.ext.primitiveMeta('meta', strings, this.vars.typeId);
+                });
         })
         .pushVars();
 });
