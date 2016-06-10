@@ -1,4 +1,4 @@
-const Dissolve = require('./dissolve-own');
+const CorrodeBase = require('./corrode-base');
 const utils = require('./utils');
 
 const fnName = require('function-name');
@@ -7,7 +7,7 @@ const EXTENSIONS = {};
 const MAPPERS = require('./map');
 const ASSERTIONS = require('./assert');
 
-class Corrode extends Dissolve {
+class Corrode extends CorrodeBase {
     constructor(){
         super(...arguments);
 

@@ -54,20 +54,20 @@ class VariableStack {
 }
 
 
-module.exports = class Dissolve extends Transform {
+module.exports = class CorrodeBase extends Transform {
     jobs = [];
     varStack = new VariableStack();
     buffer = new BufferList();
     streamOffset = 0;
     chunkOffset = 0;
+    isUnwinding = false;
 
     static defaults = {
         endianness: 'le',
         loopVarName: '__loop_tmp',
         encoding: 'utf8',
-        shortenOnEOF: false,
-        unwindChunks: true,
-        popAllOnEOF: false
+        wrapOnEOC: false,
+        finishJobsOnEOF: true
     };
 
     get vars(){
@@ -82,13 +82,12 @@ module.exports = class Dissolve extends Transform {
         super({ ...options, objectMode: true, encoding: null });
 
         this.options = {
-            ...Dissolve.defaults,
+            ...CorrodeBase.defaults,
             ...options
         };
 
-        if(this.options.popAllOnEOF){
-            // TODO: decouple _transform tasks, so we can instead just call unwindRemainingJobs
-            this.on('finish', ::this.varStack.popAll);
+        if(this.options.finishJobsOnEOF){
+            this.on('finish', ::this.finishRemainingJobs);
         }
     }
 
@@ -97,6 +96,14 @@ module.exports = class Dissolve extends Transform {
 
         this.buffer.append(chunk);
 
+        this.jobLoop();
+
+        super.push(null);
+        this.buffer.consume(this.chunkOffset);
+        return done();
+    }
+
+    jobLoop(){
         while(this.jobs.length > 0){
             let job = this.jobs[0];
 
@@ -170,16 +177,17 @@ module.exports = class Dissolve extends Transform {
 
             let remainingBuffer = this.buffer.length - this.chunkOffset;
 
-            if(this.options.shortenOnEOF && remainingBuffer > 0 && remainingBuffer <= length && (job.type === 'blob' || job.type === 'string')){
+            if(this.options.wrapOnEOC && remainingBuffer > 0 && remainingBuffer <= length && (job.type === 'blob' || job.type === 'string')){
                 length = remainingBuffer;
             }
 
             // break on end of buffer (wait if we're not unwinding yet)
             if(this.buffer.length - this.chunkOffset < length){
 
-                if(this.options.unwindChunks && this.jobs.length > 0){
+                if(this.isUnwinding && this.jobs.length > 0){
+                    console.log('isUnwinding & bufferend');
                     // unwind loop, by removing the loop job
-                    this.unwindRemainingJobs();
+                    this.filterNonReadJobs();
                     continue;
                 }
                 break;
@@ -236,17 +244,18 @@ module.exports = class Dissolve extends Transform {
                 this.moveOffset(length);
             }
         }
-
-        super.push(null);
-        this.buffer.consume(this.chunkOffset);
-        return done();
     }
 
+    finishRemainingJobs(){
+        this.isUnwinding = true;
+        this.filterNonReadJobs();
+        this.jobLoop();
+    }
 
     /**
      * purges all jobs from the job-queue, which need to read from the stream
      */
-    unwindRemainingJobs(){
+    filterNonReadJobs(){
         let filteredJobs = this.jobs
             .slice()
             .filter(job => job.type === 'pop' || (job.type === 'tap' && !job.name));

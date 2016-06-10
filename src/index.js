@@ -30,7 +30,7 @@ hashNamesCorrode.on('finish', function(){
     tabStream.pipe(tabCorrode);
     tabCorrode.on('finish', function(){
         let arcStream = fs.createReadStream(arcFile);
-        let arcEntryCorrode = Corrode({ unwindChunks: false }).ext.arcEntry('values', tabCorrode.vars[1]).pushVars();
+        let arcEntryCorrode = Corrode().ext.arcEntry('values', tabCorrode.vars[1]).pushVars();
 
         arcStream.pipe(arcEntryCorrode);
         arcEntryCorrode.on('finish', function(){
