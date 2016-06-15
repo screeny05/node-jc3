@@ -35,7 +35,8 @@ exports.PRIMITIVE_TYPE_SIZES = {
     uint16: 2,
     uint8:  1,
     sint8:  1,
-    float:  4
+    float:  4,
+    double: 4
 };
 
 exports.TYPE_IDS_ARRAY = lodash.values(exports.TYPE_IDS);
@@ -55,3 +56,6 @@ exports.ARRAY_LIKE_TYPE_IDS = [
     exports.TYPE_IDS.inlineArray,
     exports.TYPE_IDS.stringHash
 ];
+
+exports.TYPE_IDS_BY_ID = lodash.invert(exports.TYPE_IDS);
+exports.PRIMITIVE_TYPE_IDS_BY_ID = lodash.invert(exports.PRIMITIVE_TYPE_IDS);

@@ -10,7 +10,7 @@ const Corrode = require('../corrode');
  *     defaultValue uint32
  * }]
  */
-Corrode.addExtension('structureMembers', function(strings, length = 'structureSize'){
+Corrode.addExtension('structureMemberTypes', function(strings, length){
     if(typeof length === 'string'){
         length = this.varStack.getValueAbove()[length];
     }

@@ -1,6 +1,7 @@
 const CorrodeBase = require('./corrode-base');
 const utils = require('./utils');
 
+const lodash = require('lodash');
 const fnName = require('function-name');
 
 const EXTENSIONS = {};
@@ -122,15 +123,25 @@ module.exports = function(){
     return new Corrode(...arguments);
 };
 
-module.exports.addExtension = function(name, fn){
+module.exports.addExtension = function(name, fn, extension){
     fnName(fn, name);
 
     EXTENSIONS[name] = function(name = 'values', ...args){
-        return this.tap(name, function(){
+        this.tap(name, function(){
             fn.apply(this, args);
         });
+
+        if(typeof extension !== 'undefined'){
+            this.tap(function(){
+                lodash.extend(this.vars[name], extension);
+            });
+        }
+
+        return this;
     };
-}
+
+    EXTENSIONS[name].orgFn = fn;
+};
 
 module.exports.EXTENSIONS = EXTENSIONS;
 module.exports.MAPPERS = MAPPERS;

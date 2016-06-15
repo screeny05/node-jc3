@@ -4,7 +4,7 @@ module.exports = {
     array:           require('./array'),
     hashNamesTable:  require('./hash-names-table'),
     instanceTable:   require('./instance-table'),
-    primitiveMeta:   require('./primitive-meta'),
+    primitiveTypeMeta:   require('./primitive-meta'),
     primitive:       require('./primitive'),
     stringHashTable: require('./string-hash-table'),
     stringTable:     require('./string-table'),
