@@ -5,7 +5,7 @@ const Corrode = require('../corrode');
  *     arrayCheck uint32,
  * }
  */
-Corrode.addExtension('arrayMeta', function(){
+Corrode.addExtension('arrayTypeMeta', function(){
     this
         .uint32('arrayCheck')
         .assert.equal('arrayCheck', 0);

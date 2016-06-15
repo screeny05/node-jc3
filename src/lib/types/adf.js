@@ -62,6 +62,15 @@ Corrode.addExtension('adfMeta', function(){
         });
 });
 
+
+/**
+ * @return {
+ *     stringTable <stringTable>,
+ *     stringHashTable <stringHashTable>,
+ *     typeTable <typeTable>,
+ *     instanceTable <instanceTable>,
+ * }
+ */
 Corrode.addExtension('adf', function(){
     this
         .ext.adfMeta('meta')
@@ -84,6 +93,15 @@ Corrode.addExtension('adf', function(){
         .tap(function(){
             this
                 .position(this.vars.meta.instanceTableOffset)
-                .ext.instanceTable('instanceTable', this.vars.stringTable, this.vars.typeTable, this.vars.meta.instanceTableSize)
+                .ext.instanceTable('instanceTable', this.vars.stringTable, this.vars.typeTable, this.vars.meta.instanceTableSize);
         })
+
+        .tap(function(){
+            this.vars = {
+                stringTable: this.vars.stringTable,
+                stringHashTable: this.vars.stringHashTable,
+                typeTable: this.vars.typeTable,
+                instanceTable: this.vars.instanceTable
+            };
+        });
 });

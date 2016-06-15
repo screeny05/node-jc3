@@ -1,10 +1,7 @@
 const Corrode = require('../corrode');
 
 /**
- * @return [{
- *     name string
- *     data buffer
- * }]
+ * @return [<arcEntry>]
  */
 Corrode.addExtension('arc', function(tab){
     this
@@ -24,6 +21,12 @@ Corrode.addExtension('arc', function(tab){
         .pushVars();
 });
 
+/**
+ * @return {
+ *     name string,
+ *     data blob
+ * }
+ */
 Corrode.addExtension('arcEntry', function(tabEntry){
     this.vars.name = tabEntry.name;
 

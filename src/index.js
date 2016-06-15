@@ -30,15 +30,15 @@ hashNamesCorrode.on('finish', function(){
     tabStream.pipe(tabCorrode);
     tabCorrode.on('finish', function(){
         let arcStream = fs.createReadStream(arcFile);
-        let arcEntryCorrode = Corrode().ext.arcEntry('values', tabCorrode.vars[1]).pushVars();
+        let arcCorrode = Corrode().ext.arcEntry('values', tabCorrode.vars[2]).pushVars();
 
-        arcStream.pipe(arcEntryCorrode);
-        arcEntryCorrode.on('finish', function(){
-            let adfData = arcEntryCorrode.vars.data;
+        arcStream.pipe(arcCorrode);
+        arcCorrode.on('finish', function(){
+            let adfData = arcCorrode.vars.data;
             let adfCorrode = Corrode().ext.adf('values').pushVars();
 
             adfCorrode.write(adfData);
-            console.log(adfCorrode.vars);
+            console.log(adfCorrode.vars.instanceTable[0]);
         });
     });
 });

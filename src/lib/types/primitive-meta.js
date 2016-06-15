@@ -2,13 +2,20 @@ const Corrode = require('../corrode');
 
 const types = require('../data/types');
 
-Corrode.addExtension('primitiveMeta', function(strings, typeId){
+/**
+ * structure:
+ * @return <structureMemberTypes>
+ *
+ * array:
+ * @return <arrayTypeMeta>
+ */
+Corrode.addExtension('primitiveTypeMeta', function(strings, typeId){
     if(typeId === types.TYPE_IDS.structure){
         this
             .uint32('structureSize')
-            .ext.structureMembers('values', strings)
+            .ext.structureMemberTypes('values', strings)
     } else if(types.ARRAY_LIKE_TYPE_IDS.indexOf(typeId) !== -1){
-        this.ext.arrayMeta('values');
+        this.ext.arrayTypeMeta('values');
     } else {
         throw new TypeError(`unsupported data-type (${typeId})`);
     }
