@@ -90,6 +90,11 @@ module.exports = {
             throw new TypeError(`Expected array to have a length of ${length}, has ${this.vars[name].length}`);
     },
 
+    /**
+     * asserts a variable exists in the first place
+     * @param {string}   name   key of the value to test
+     * @throws TypeError assertion-error
+     */
     exists(name){
         if(typeof this.vars[name] === 'undefined')
             throw new TypeError(`Expected var ${name} to exist`);
